@@ -1,0 +1,24 @@
+
+
+
+Because it has to be. In series connected batteries, the same current flows through each battery (first through one, then the next, then the next, and so on...). This means that each battery has the same amount of current flowing through it, and since you are increasing power with multiple batteries, the voltage must be increasing. I can't say I know the real physics answer of why this happens (it is likely pretty in-depth), but your question has inspired me to research it, and I am pretty experienced working with electricity. So your teacher is partially correct in saying you don't really need to know. Really, he probably doesn't know himself, but didn't want to say as much.
+
+But the thing is, to try to get to the bottom of "why?" on every part of electricity would take you years, and is far beyond the scope of any one class on electricity. The core mechanics of electrical energy is based on laws of electromagnetism, which is basically at the core of all mechanics in our universe. To understand every part of it is not only not really possible, but would take a career specialized in doing so. And even at elite levels of studying such things, there are times where they just have to go, "Well, it works that way just because it does."
+
+And to clarify your question here, you should be thinking of your lightbulbs in terms of resistance, not voltage. There isn't really such a thing as a "2 volt lightbulb", except a bulb that is rated to handle up to 2 volts. Knowing that doesn't tell you anything about your circuit. You need to know how many ohms the lightbulb is, and instead of even thinking about lightbulbs, you can simplify it and just think of it as resistors.
+
+And how exactly the electricity "knows" that there are more bulbs in the circuit, and doesn't just drop the voltage to 0 at the first load, is something that takes a lot of prerequisite understanding to really grasp. But it's a fundamental property that loads in series in a closed circuit will split voltage proportionally based on their resistance.
+
+So if you are applying 4 volts to a series of loads, you can know that the voltage will drop to 0 by the time it's done. How much it drops at each load depends on that load's resistance, relative to the total resistance of the circuit. In other words, each load is going to get a piece of the total voltage, and how much it gets is based on how much resistance each load has.
+
+If you have 3 loads, one is 5 ohms, one is 3 ohms, and one is 2 ohms, your total resistance in the 4v circuit is 10 ohms. Using Ohm's law (current = voltage/resistance), then you know the current in the circuit is 4/10 = 0.4 amps. Now knowing the current, you can calculate the voltage at each load by multiplying the current by the resistance of that load (Ohm's law). It just so happens that the voltage at each load will be proportional to what percentage of the total resistance it has:
+
+5 ohms is 50% of 10, so you will read 50% of the total applied voltage across that load (4 * 0.5 = 2v). Or, 0.4A * 5 Ohms = 2v
+
+3 ohms is 30% of 10, so you will read 30% of the total applied voltage across that one (4 * 0.3 = 1.2v). Or, 0.4A * 3 Ohms = 1.2v
+
+2 ohms is 20% of 10, so you will read 20% of the total voltage across that one (4 * 0.2 = 0.8v) Or, 0.4A * 2 Ohms = 0.8v
+
+Does that make sense? If your total applied voltage was 40 volts instead of 4, then each load would see 10x the voltage, but the relationships between them would be the same.
+
+Your example with the 3v and 2v bulbs doesn't really make sense to me, though. If they were 3 ohms and 2 ohms, then the 3 ohm load would have 3/5, or 60% of the total voltage (2.4v), and the 2 ohm load would have 2/5, or 40% (1.6v). The order in which they occur in the circuit does not have any effect on it.

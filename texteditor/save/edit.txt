@@ -1,0 +1,402 @@
+
+#include "editor.h"
+#include "terminal.h"
+#include "piece_table.h"
+#include "dyarray.h"
+#include "utils.h"
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
+#define LINE_NUMBER_OFFSET 3
+Editor* createEditor(){
+	Editor* editor = malloc(sizeof(Editor));
+	editor->cx = 0;
+	editor->cy = 0;
+	editor->row_offset = 0;
+	editor->col_offset = 0;
+	editor->screen_rows = -1;
+	editor->screen_cols = -1;
+	editor->line_number_offset = LINE_NUMBER_OFFSET;
+	editor->table = NULL;
+
+	// editor->original_attributes = NULL;
+	return editor;
+}
+
+
+int editorEnableRawMode(Editor* e){
+	struct termios original = terminalEnableRawMode();
+	e->original_attributes = original;
+	return 0;
+}
+
+int editorDisableRawMode(Editor* e){
+	terminalDisableRawMode(&e->original_attributes);
+	return 0;
+}
+
+int editorUpdateScreenDimensions(Editor* e){
+	if(terminalGetTermDim(&e->screen_rows, &e->screen_cols) == -1){
+		return -1;
+	}
+	return 0;
+}
+
+
+int editorInitializeBuffer(Editor* e, const char* text){
+	e->table = createPieceTable(text);
+	return 0;
+}
+
+int editorGetCursorPieceTablePosition(Editor* e){
+
+	LOG("----------- Cursor PT Position ------------%d\n",0);
+	int pt_current_pos = 0;
+    int row = 0;
+
+    Piece* current = e->table->head;
+	while (current != NULL) {
+
+        int isTargetRow = row == e->cy;
+		LOG("Looping Start: isTarget=%d row=%d, pt_pos=%d \n", isTargetRow, row, pt_current_pos);
+		if(isTargetRow){
+			
+			int pt_cursor_pos = pt_current_pos + e->cx - e->line_number_offset;
+			LOG("Returing POSITION: %d\n", pt_cursor_pos);
+			return pt_cursor_pos;
+		}
+
+		int containsNewRow = current->line_breaks.size > 0;
+		int canSkipPiece = (row + current->line_breaks.size) < e->cy;
+		if(!containsNewRow || canSkipPiece){
+			LOG("Skipping piece %d\n", 0);
+			row += current->line_breaks.size;
+			pt_current_pos += current->length;
+			current = current->next;
+			continue;
+		}
+
+		// Loop through piece to try and find target row
+		int pt_pos_increments = 0;
+		for (int i = 0; i < current->line_breaks.size; i++) {
+			LOG("INSIDE LB LOOP: isTarget=%d, row=%d, pt_pos=%d, pt_incr=%d CY=%d \n", row == e->cy, row, pt_current_pos, pt_pos_increments, e->cy);
+
+
+					
+			if (i == 0) {
+				LOG("LB LOOP: INCR i==0: Ammount=%d\n", current->line_breaks.items[i] + 1);
+				pt_pos_increments += current->line_breaks.items[i] + 1;
+			} else {
+
+				LOG("LB LOOP: INCR: Ammount=%d\n", (current->line_breaks.items[i] - current->line_breaks.items[i - 1]) + 1);
+				pt_pos_increments += (current->line_breaks.items[i] - current->line_breaks.items[i - 1]) + 1;
+			}
+			row++;
+
+			// Found target row
+			if(row == e->cy){
+				int pt_cursor_pos = pt_current_pos + pt_pos_increments + e->cx - e->line_number_offset;
+				LOG("Returing POSITION: %d\n", pt_cursor_pos);
+				return pt_cursor_pos;
+			}
+		}
+
+		// Adjust the pt_current_pos correctly if the target row wasn't found in this piece
+		LOG("After LB LOOP: Need to move to next piece: Adding non accounted for <%d> \n", current->length - pt_pos_increments);
+		pt_current_pos += (current->length - pt_pos_increments) + pt_pos_increments;
+		current = current->next;
+
+
+	}
+
+    // Return the final cursor position if the loop completes without finding the target row
+    return pt_current_pos;
+}
+
+
+
+
+int editorGetCursorLineLength(Editor* e, int target_row){
+	LOG("----------- Cursor Line Length ------------%d\n",0);
+	int found_row = 0;
+    int row = 0;
+    int line_length = 0;
+	int current_line_break_index = 0;
+
+    Piece* current = e->table->head;
+    while (current != NULL) {
+		LOG("Starting Loop: row=%d, line_length=%d, piece_length=%d, current_line_break_index=%d\n", row, line_length, current->length, current_line_break_index);
+		LOG("CURRENT PIECE: line_breaks_total = %d\n", current->line_breaks.size);
+
+
+        int isTargetRow = row == target_row;
+		LOG("isTargetRow: %d\n", isTargetRow);
+        if (isTargetRow) {
+			LOG("Target row found in current piece, curr_line_breaks=%d\n", current->line_breaks.size);
+
+			if(current_line_break_index > 0 && current_line_break_index < current->line_breaks.size){
+				LOG("WITHIN CURRENT OPTIMIZATION %d\n", 0);
+                // Current piece has another line break; this is the ending point of our target row
+                int line_break_position = current->line_breaks.items[current_line_break_index];
+                int previous_line_break_position = current->line_breaks.items[current_line_break_index - 1];
+                line_length += line_break_position - previous_line_break_position - 1;
+				LOG("Line Length Calculated (within piece): %d, first=%d prev=%d\n", line_length, line_break_position, previous_line_break_position);
+                return line_length;
+			}
+
+
+            if(current_line_break_index == current->line_breaks.size){
+                // Handle case where the current line continues into the next piece
+                line_length += current->length - (current->line_breaks.size > 0 ? current->line_breaks.items[current_line_break_index - 1] + 1 : 0);
+                current = current->next;
+                current_line_break_index = 0;
+
+                while (current != NULL) {
+                    LOG("Continuing in next piece, length so far: %d\n", line_length);
+                    if (current->line_breaks.size > 0) {
+                        int line_break_position = current->line_breaks.items[0];
+                        line_length += line_break_position;
+                        LOG("Line Length Calculated (to first line break in next piece): %d\n", line_length);
+                        return line_length;
+                    } else {
+                        line_length += current->length;
+                        current = current->next;
+                    }
+                }
+                LOG("Line continues until the end of the buffer, length: %d\n", line_length);
+                return line_length;
+            }
+
+			
+			if(current->line_breaks.size <= 0){
+				// Skip piece that contains no line breaks 
+				line_length += current->length;
+				current = current->next;
+current_line_break_index = 0;
+				LOG("Skipping piece with no line breaks. New line length: %d\n", line_length);
+				continue;
+			} else {
+				// Calculate line length from the current position to the first line break
+				int line_break_position = current->line_breaks.items[0];
+				line_length += line_break_position;
+				LOG("Line Length Calculated (to first line break): %d\n", line_length);
+				return line_length;
+			}
+
+
+
+
+		} else {
+			LOG("Target row not found in current piece %s\n", ".");
+			int containsNewRow = current->line_breaks.size > 0;
+			int canSkipPiece = (row + current->line_breaks.size) < e->cy;
+			if(!containsNewRow || canSkipPiece){
+				row += current->line_breaks.size;
+				current = current->next;
+				LOG("Skipping piece. New row: %d\n", row);
+				continue;
+			}
+
+			LOG("Searching for target row within piece %s\n", ".");
+			for (int i = 0; i < current->line_breaks.size; i++) {
+				// Found target row
+				if(row == target_row){
+					found_row = 1;
+					current_line_break_index = i;
+					LOG("Found target row at index: %d\n", current_line_break_index);
+					break;
+				}
+
+				row++;
+				LOG("Checking line break index: %d, row: %d\n", i, row);
+
+
+			}
+
+
+		}
+
+		// Found target row
+		if(row == target_row & !found_row){
+			found_row = 1;
+			current_line_break_index = current->line_breaks.size;
+			LOG("OUTSIDE Found target row at index: %d\n", current_line_break_index);
+		}
+
+		LOG("AFTER line break loop, found?=%d\n", found_row);
+		if(!found_row) current = current->next;
+
+
+	}
+}
+
+
+
+int editorGetTotalLines(Editor* e){
+	int total_lines = 0;
+	Piece* current = e->table->head;
+
+	while(current != NULL){
+		total_lines += current->line_breaks.size;
+		current = current->next;
+	}
+
+	return total_lines;
+}
+
+
+
+void editorUpdateCursorPosition(Editor* e, int x, int y){
+	// int line_length = editorGetCursorLineLength(e);
+	
+	int updated_cursors_line_len = editorGetCursorLineLength(e, y);
+	int total_lines = editorGetTotalLines(e);
+    LOG("START: Updating cursor position to (%d, %d), offsets(%d,%d), linelen=%d, total_lines=%d\n", x, y, e->row_offset, e->col_offset, updated_cursors_line_len, total_lines);
+
+
+
+	
+    // Ensure the cursor's vertical position is within valid range
+	if(y < 0){
+		e->cy = 0;
+	} else if (y > total_lines){
+		e->cy = total_lines;
+	}
+	else {
+		e->cy = y;
+	} 
+
+	// Ensure the cursor's horizontal position is within valid range
+    if (x < e->line_number_offset) {
+        e->cx = e->line_number_offset; // Prevents from moving before start of line
+	} else if (x - e->line_number_offset >= updated_cursors_line_len){
+		// x = updated_cursors_line_len; // Prevents from moving past end of line
+e->cx = updated_cursors_line_len + e->line_number_offset; // Move to the end of the line if the line is shorter
+	} 
+	else {
+        e->cx = x;
+     }
+
+	LOG("Handling scrolling of screen  Updated cursorPosition=(%d,%d)\n",e->cx, e->cy);
+
+    // Handle vertical scrolling
+    if (e->cy < e->row_offset) {
+        e->row_offset = e->cy;
+    } else if (e->cy >= e->row_offset + e->screen_rows) {
+        e->row_offset = e->cy - e->screen_rows + 1;
+    }
+
+    LOG("Horizontal scroll check: cx=%d, col_offset=%d, screen_cols=%d, line_number_offset=%d\n",
+        e->cx, e->col_offset, e->screen_cols, e->line_number_offset);
+
+    if (e->cx < e->col_offset + e->line_number_offset) {
+        e->col_offset = e->cx - e->line_number_offset;
+    } else if (e->cx >= e->col_offset + e->screen_cols) {
+        e->col_offset = e->cx - e->screen_cols + 1;
+    }
+}
+
+
+int editorInsertCharacter(Editor* e, char c){
+	LOG("INSERT: getting Position %d\n", 0);
+	int cursor_position = editorGetCursorPieceTablePosition(e);
+	LOG("Inserting  '%c' at cursor position (%d, %d) piece position = %d", c, e->cx, e->cy, cursor_position);
+    char temp[2] = {c, '\0'};
+    pieceTableInsert(e->table, cursor_position, temp);
+
+	LOG("BEFORE Update %d \n", e->cx);
+	editorUpdateCursorPosition(e, e->cx + 1, e->cy);
+	LOG("AFTER Update %d \n", e->cx);
+	return 0;
+}
+
+
+int editorDeleteCharacter(Editor* e, int length){
+	int cursor_position = editorGetCursorPieceTablePosition(e);
+
+	LOG("Deleting  at cursor position (%d, %d) piece position = %d",  e->cx, e->cy, cursor_position);
+    pieceTableDelete(e->table, cursor_position, length);
+
+
+	LOG("BEFORE DELETE Update %d \n", e->cx);
+
+	editorUpdateCursorPosition(e, e->cx - 1, e->cy);
+
+	LOG("AFTER DELETE Update %d \n", e->cx);
+	return 0;
+}
+
+
+int editorRenderText(Editor* e){
+	RenderdText buff;
+	dyarr_init(&buff, 20);
+    int line_number = e->row_offset + 1;
+
+    // Add line number 
+    char line_number_buff[32];
+	snprintf(line_number_buff, sizeof(line_number_buff), "\033[48;5;236;38;5;248m %d \033[0m", line_number);
+    dyarr_append_multiple(&buff, line_number_buff, strlen(line_number_buff));
+
+	// Loop over each piece in table
+	Piece* current = e->table->head;
+    int characters_in_line = 0;
+	int current_position = 0;
+	int current_row = 0;
+	while(current != NULL){
+		for(int i = 0; i < current->length; i++){
+			const char* txt = PIECE_GET_BUFFER(e->table, current);
+			char c = txt[current->start + i];
+
+            // Skip rows until we reach the row_offset
+            if(current_row < e->row_offset){
+                if(c == '\n') current_row++;
+                continue;
+            }
+
+			if( c == '\n'){
+                characters_in_line = 0;
+                current_row++;
+
+                // Check if the current row exceeds the screen height
+                if(current_row >= e->row_offset + e->screen_rows) break;
+
+				// ANSI code to reset cursor postion to start of line
+				dyarr_append_multiple(&buff, "\033[1G",strlen("\033[1G") );
+				dyarr_append_multiple(&buff, "\033[1B",strlen("\033[1B") );
+
+				// Add line number for the new row
+				line_number++;
+				char line_number_buff[32];
+				snprintf(line_number_buff, sizeof(line_number_buff), "\033[48;5;236;38;5;248m %d \033[0m", line_number);
+				dyarr_append_multiple(&buff, line_number_buff, strlen(line_number_buff));
+				
+			}else {
+
+                // Skip characters outside of the screen columns offset
+                if(characters_in_line >= e->col_offset && characters_in_line < e->col_offset + e->screen_cols - e->line_number_offset){
+                    dyarr_append(&buff, c);
+                }
+                characters_in_line++;
+			} 
+
+		}		
+		current = current->next;
+	}
+
+    // Append the ANSI code to reset the cursor to editor cx, cy
+	LOG("REDNERING SCREEN: x,y=(%d,%d)\n", e->cx, e->cy);
+    char cursor_reset[32];
+    snprintf(cursor_reset, sizeof(cursor_reset), "\033[%d;%dH", e->cy + 1, e->cx + 1);
+    dyarr_append_multiple(&buff, cursor_reset, strlen(cursor_reset));
+
+    printf("%.*s", buff.size, buff.items);
+    fflush(stdout);
+
+	dyarr_free(&buff);	
+
+	return 0;
+}
+
+
+

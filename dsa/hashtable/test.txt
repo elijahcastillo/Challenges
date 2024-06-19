@@ -1,0 +1,6 @@
+This is a simple example text file.
+This file contains some words.
+Some words appear more than once.
+For example, the word "some" appears twice.
+The word "example" appears only once.
+The word "word" appears twice.
