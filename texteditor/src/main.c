@@ -24,7 +24,7 @@ int main(int argc, char** argv){
 	// return 0;
 
 	Editor* editor = createEditor();
-	editor->cx += 3; // Line numbers padding start
+	// editor->cx += 3; // Line numbers padding start
 
 	if(editorEnableRawMode(editor) == -1) die("Unable To Enable Raw Mode");
 	if(editorUpdateScreenDimensions(editor) == -1) die("Cannot get terminal dimensions");
@@ -32,7 +32,7 @@ int main(int argc, char** argv){
 	CURSOR_RESET();
 
 
-	editorInitializeBuffer(editor, readFileToString("src/main.c"));
+	editorInitializeBuffer(editor, readFileToString("test2.txt"));
 	editorRenderText(editor);
 	char c;
     while (1) {
@@ -58,20 +58,20 @@ int main(int argc, char** argv){
                     switch (seq[1]) {
                         case 'A':
                             // Handle up arrow key press
-							editorUpdateCursorPosition(editor, editor->cx, editor->cy - 1);
+							editorUpdateCursorPosition(editor, editor->ptx, editor->pty - 1);
                             break;
                         case 'B':
                             // Handle down arrow key press
-							editorUpdateCursorPosition(editor, editor->cx, editor->cy + 1);
+							editorUpdateCursorPosition(editor, editor->ptx, editor->pty + 1);
                             break;
                         case 'C':
                             // Handle right arrow key press
-							editorUpdateCursorPosition(editor, editor->cx + 1, editor->cy);
+							editorUpdateCursorPosition(editor, editor->ptx + 1, editor->pty);
                             break;
                         case 'D':
                             // Handle left arrow key press
 
-							editorUpdateCursorPosition(editor, editor->cx - 1, editor->cy);
+							editorUpdateCursorPosition(editor, editor->ptx - 1, editor->pty);
                             break;
                     }
                 }

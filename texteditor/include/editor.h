@@ -13,10 +13,11 @@ typedef enum {
 typedef struct {
 	struct termios original_attributes;
 	int cx, cy;						// Position of cursor on screen
+	int ptx, pty;					// Position of cursor relative to piece table
 	int row_offset, col_offset;		// Offset of rows and columns displayed on screen
 	int screen_rows, screen_cols;	// # of rows and columns that we can show on sceren
 	int line_number_offset;         // Offset from left of screen taken up by line numbers
-	PieceTable* table				// Store the text on screen
+	PieceTable* table;				// Store the text on screen
 } Editor;
 
 
