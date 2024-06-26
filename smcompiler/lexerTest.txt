@@ -1,1 +1,12 @@
-+32+ so cool "awesome" - 12+-
+func main(int a, char b){
+	if(true) return 1;
+}
+//test
+var a = 3 x 2 / 3;
+
+class a {
+	int b = 3
+	for(int i = 0; i < 10; i++){
+		i--;
+	}
+}

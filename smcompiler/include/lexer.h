@@ -3,13 +3,14 @@
 #include <stdio.h>
 #include <stddef.h>
 
-enum TokenType {
+typedef enum {
 	
 	IDENTIFIER,
 	FUNC,
 	INTEGER,
 	FLOAT,
 	STRING,
+	NEW_LINE,
 
 	LBRACE,
 	RBRACE,
@@ -17,6 +18,19 @@ enum TokenType {
 	RPAREN,
 	COMMA,
 	DOT,
+	SEMICOLON,
+	OR,
+	AND,
+
+
+	LESS,
+	LESS_EQUAL,
+	GREATER,
+	GREATER_EQUAL,
+
+	EQUAL,
+	EQUALITY,
+	NOT_EQUAL,
 
 	// Operators
 	ADD,
@@ -28,29 +42,32 @@ enum TokenType {
 	TOKEN_EOF,
 	TOKEN_ERROR,
 	TOKEN_UNKNOWN,
-};
+} TokenType;
+
+
 
 typedef struct {
-	enum TokenType type;
-	const char* str;
-	int hash;
+	TokenType type;
+	char* str;	// Start of slice into lexer source
+	int length;		// Length of slice
+	int line;
 } Token;
 
 typedef struct {
-	FILE*  file;	  // File handle to text being tokenized	
-	char*  fileBuff;  // Chunk of file ready to parse
-	size_t buffIndex; // Index into chunk to read next char 
-	size_t buffSize;  // Current valid buffer size
-	int    line;	  // Tracks current line to report errors	
+	char* source;			// Stores the raw string from the file
+	size_t sourceLength;	// Stores the raw string from the file
+	char* tokenStart; // Pointer to start of token in source
+	char* current;	// Pointer to the current character
+	int    line;			// Tracks current line to report errors	
 } Lexer;
 
 
+char* readFileToString(const char* filename, size_t* sizeOut);
+char* tokenTypeToString(TokenType type);
+void tokenPrint(Token tok);
+
 Lexer* lexerInit(const char* filepath);
 void lexerFree(Lexer* lex);
-
-size_t lexerReadChunk(Lexer* lex);
-char lexerConsumeChar(Lexer* lex);
-char lexerPeekChar(Lexer* lex);
 
 Token lexerParseToken(Lexer* lex);
 Token lexerNextToken(Lexer* lex);

@@ -1,113 +1,135 @@
 #include "lexer.h"
 #include <stdlib.h>
-
+#include <stdio.h>
 #include <ctype.h> 
 
-#define LEXER_FILE_BUFF_SIZE 10
-#define INITIAL_IDENTIFIER_SIZE 64
-#define INITIAL_NUMBER_SIZE 10
-#define INITIAL_STRING_SIZE 10
-#define DYNAMIC_GROWTH_FACTOR 2
+
+char* readFileToString(const char* filename, size_t* sizeOut) {
+    FILE* file = fopen(filename, "r");
+    if (file == NULL) {
+        perror("Failed to open file");
+        return NULL;
+    }
+
+    // Seek to the end of the file to determine the file size
+    fseek(file, 0, SEEK_END);
+    long int size = ftell(file);
+    rewind(file);
+
+    // Allocate memory for the entire content plus the null terminator
+    char* buffer = malloc(size + 1);
+    if (buffer == NULL) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        return NULL;
+    }
+
+    // Read the file into memory
+    size_t bytesRead = fread(buffer, 1, size, file);
+    if (bytesRead != size) {
+        perror("Error reading file");
+        free(buffer);
+        fclose(file);
+        return NULL;
+    }
+
+    // Null-terminate the string
+    buffer[size] = '\0';
+
+    // Set the file size output if requested
+    if (sizeOut != NULL) {
+        *sizeOut = size;
+    }
+
+    // Close the file and return the buffer
+    fclose(file);
+    return buffer;
+}
 
 Lexer* lexerInit(const char* filepath){
 	Lexer* lex = malloc(sizeof(Lexer));
 	if(!lex) return NULL;
 
-
-	lex->fileBuff = malloc(sizeof(char) * LEXER_FILE_BUFF_SIZE + 1); // +1 for \0
-	if(!lex->fileBuff){
-		free(lex);
-		return NULL;
-	}
-
-	lex->file = fopen(filepath ,"r");
-	if(!lex->file){
-		free(lex->fileBuff);
-		free(lex);
-		return NULL;
-	}
-
+	lex->sourceLength = 0;
+	lex->source = readFileToString(filepath, &lex->sourceLength);
+	lex->current = lex->source; // Start at the begining of source
 	lex->line = 1;
-	lex->buffIndex = 0;
-	lex->buffSize = 0;
-	lexerReadChunk(lex);
 
 	return lex;
 }
 
 void lexerFree(Lexer* lex){
 	if(lex == NULL) return;
-
-	if(lex->fileBuff) free(lex->fileBuff);
-	if(lex->file) fclose(lex->file);
+	if(lex->source) free(lex->source);
 	free(lex);
 }
 
-size_t lexerReadChunk(Lexer* lex){
-	if (lex == NULL || lex->file == NULL || lex->fileBuff == NULL) {
-        return 0;
-    }
-
-    size_t read_count = fread(lex->fileBuff, sizeof(char), LEXER_FILE_BUFF_SIZE, lex->file);
-
-	// Null-terminate the buffer
-	lex->fileBuff[read_count] = '\0'; 
-
-	// Reset buffer index
-	lex->buffIndex = 0;
-
-    // Update the buffer size
-    lex->buffSize = read_count;
-
-    return read_count;
+Token _createToken(Lexer* lex, TokenType type){
+	Token tok;
+    tok.type = type;
+    tok.str = lex->tokenStart;
+    tok.length = (int)(lex->current - lex->tokenStart);
+    tok.line = lex->line;
+	return tok;
 }
 
-char lexerConsumeChar(Lexer* lex){
-	if(lex->buffIndex >= lex->buffSize){
-		int charsRead = lexerReadChunk(lex);	
-		if(charsRead == 0){
-			return '\0';
-		}
-	}
+Token _createEOFToken(Lexer* lex){
+	Token tok;
+    tok.type = TOKEN_EOF;
+    tok.str = lex->current;
+    tok.length = 0;
+    tok.line = lex->line;
+	return tok;
+}
 
-	return lex->fileBuff[lex->buffIndex++];
+void tokenPrint(Token tok){
+	printf("Token(type=%s str='%.*s' len=%d line=%d)\n", tokenTypeToString(tok.type), tok.length, tok.str, tok.length, tok.line);
+}
+
+int isAlpha(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+}
+
+int isNum(char c) {
+    return c >= '0' && c <= '9';
+}
+int isAlphaNum(char c) {
+    return isAlpha(c) || isNum(c);
+}
+
+int lexerIsAtEnd(Lexer* lex){
+	return lex->current >= lex->source + lex->sourceLength;
+		
+}
+
+
+
+char lexerConsumeChar(Lexer* lex){
+	char c =  *lex->current;
+	if(c == '\n') lex->line++;
+    lex->current++;
+    return c;
 }
 
 char lexerPeekChar(Lexer* lex){
-    if (lex->buffIndex >= lex->buffSize) {
-        int charsRead = lexerReadChunk(lex);
-        if (charsRead == 0) {
-            return '\0';
-        }
-    }
+    if(lexerIsAtEnd(lex)) return '\0';
+    return *lex->current;
+}
 
-	return lex->fileBuff[lex->buffIndex];
+char lexerPeekChar2(Lexer* lex) {
+    if(lexerIsAtEnd(lex)) return '\0';
+    return lex->current[1];
 }
 
 
 void _lexerSkipWhiteSpace(Lexer* lex){
-    char c = lexerPeekChar(lex);
-    while (c != '\0' && isspace(c)) {
-        if (c == '\n') lex->line++;
+    while (!lexerIsAtEnd(lex) && isspace(lexerPeekChar(lex))) {
         lexerConsumeChar(lex);
-        c = lexerPeekChar(lex);
     }
 }
 
-char* appendCharToString(char* str, size_t* size, size_t* capacity, char c) {
-    if (*size >= *capacity - 1) {
-        *capacity *= DYNAMIC_GROWTH_FACTOR;
-        char* newStr = realloc(str, *capacity * sizeof(char));
-        if (!newStr) {
-            free(str);
-            return NULL;
-        }
-        str = newStr;
-    }
-    str[(*size)++] = c;
-    str[*size] = '\0';
-    return str;
-}
+
+
 
 void _lexerError(Lexer* lex, const char* msg){
 	printf("(Lexer Error) Line %d -> %s\n", lex->line, msg);
@@ -115,144 +137,162 @@ void _lexerError(Lexer* lex, const char* msg){
 }
 
 Token _lexerConsumeIdentifier(Lexer* lex) {
-    Token token;
-    token.type = IDENTIFIER;
-    token.str = NULL;
-    token.hash = 0;
-
-    size_t identSize = 0;
-    size_t identCap = INITIAL_IDENTIFIER_SIZE;
-    char* ident = malloc(identCap * sizeof(char));
-    if (!ident) {
-		_lexerError(lex, "Failed to allocate space for identifier");
-    }
-
-    char c = lexerPeekChar(lex);
-    while (isalnum(c) || c == '_') {
-        ident = appendCharToString(ident, &identSize, &identCap, lexerConsumeChar(lex));
-        if (!ident) {
-			_lexerError(lex, "Failed to allocate space for identifier");
-        }
-        c = lexerPeekChar(lex);
-    }
-
-    token.str = ident;
-    return token;
+	while(isAlpha(lexerPeekChar(lex))){
+		lexerConsumeChar(lex);
+	}
+	return _createToken(lex, IDENTIFIER);
 }
 
 Token _lexerConsumeNumber(Lexer* lex){
-    Token token;
-    token.type = INTEGER;
-    token.str = NULL;
-    token.hash = 0;
+	while(isNum(lexerPeekChar(lex))){
+		lexerConsumeChar(lex);
+	}
 
-    size_t numSize = 0;
-    size_t numCap = INITIAL_NUMBER_SIZE;
-    char* num = malloc(numCap * sizeof(char));
-    if (!num) {
-		_lexerError(lex, "Failed to allocate space for Number");
-    }
-
-    char c = lexerPeekChar(lex);
-    while (isdigit(c)) {
-        num = appendCharToString(num, &numSize, &numCap, lexerConsumeChar(lex));
-        if (!num) {
-			_lexerError(lex, "Failed to allocate space for Number");
-        }
-        c = lexerPeekChar(lex);
-    }
-
-    token.str = num;
-    return token;
+	return _createToken(lex, INTEGER);
 }
 
 
 Token _lexerConsumeString(Lexer* lex) {
-    Token token;
-    token.type = STRING;
-    token.str = NULL;
-    token.hash = 0;
+    lexerConsumeChar(lex);  // Consume the opening quote
 
-    size_t strSize = 0;
-    size_t strCap = INITIAL_STRING_SIZE;
-    char* str = malloc(strCap * sizeof(char));
-    if (!str) {
-		_lexerError(lex, "Failed to allocate space for String");
-    }
-
-    // Consume the opening quote
-    lexerConsumeChar(lex);
-
-    char c = lexerConsumeChar(lex);
-    while (c != '\"' && c != '\0') {
+    while (!lexerIsAtEnd(lex) && lexerPeekChar(lex) != '\"') {
+        char c = lexerConsumeChar(lex);
         if (c == '\\') { // Handle escape sequences
-            char nextChar = lexerConsumeChar(lex);
-            switch (nextChar) {
-                case '\"': c = '\"'; break;
-                case '\\': c = '\\'; break;
-                case 'n': c = '\n'; break;
-                case 't': c = '\t'; break;
-                default: c = nextChar; break;
-            }
+            lexerConsumeChar(lex); // Skip the next character
         }
-        str = appendCharToString(str, &strSize, &strCap, c);
-        if (!str) {
-			_lexerError(lex, "Failed to allocate space for String");
-        }
-        c = lexerConsumeChar(lex);
     }
 
-    token.str = str;
-    return token;
+    if (lexerPeekChar(lex) == '\"') lexerConsumeChar(lex); // Consume the closing quote
+
+    return _createToken(lex, STRING);
+}
+
+
+void _lexerSkipComment(Lexer* lex) {
+    while (lexerPeekChar(lex) != '\n' && !lexerIsAtEnd(lex)) {
+            lexerConsumeChar(lex);
+	}
 }
 
 Token _lexerConsumeSingleCharacters(Lexer* lex){
-    Token token;
-    token.type = TOKEN_EOF;
-    token.str = NULL;
-    token.hash = 0;
 
+	Token tok;
     char c = lexerConsumeChar(lex);
 	char next = lexerPeekChar(lex);
 
-	if(c == '=' && next == '='){
-
-	}
-
-	if(c == '!' && next == '='){
-
-	}
+	// if(c == '=' && next == '='){
+	//
+	// }
+	//
+	// if(c == '!' && next == '='){
+	//
+	// }
 
    switch (c) {
         case '+':
-            token.type = ADD;
-            token.str = "+";
-            break;
+		    tok = _createToken(lex, ADD); break;
         case '-':
-            token.type = SUB;
-            token.str = "-";
-            break;
+		    tok = _createToken(lex, SUB); break;	
+        case '/':
+		    tok = _createToken(lex, DIV); break;	
+        case '*':
+		    tok = _createToken(lex, MULT); break;	
+        case '%':
+		    tok = _createToken(lex, MOD); break;	
+        case '=':
+		    tok = _createToken(lex, EQUAL);	break;
+        case '{':
+		    tok = _createToken(lex, LBRACE); break;
+        case '}':
+		    tok = _createToken(lex, RBRACE); break;
+        case '(':
+		    tok = _createToken(lex, LPAREN); break;
+        case ')':
+		    tok = _createToken(lex, RPAREN); break;
+        case ',':
+		    tok = _createToken(lex, COMMA); break;
+        case '.':
+		    tok = _createToken(lex, DOT); break;
+        case ';':
+		    tok = _createToken(lex, SEMICOLON); break;
+        case '<':
+		    tok = _createToken(lex, LESS); break;
+        case '>':
+		    tok = _createToken(lex, GREATER); break;
+        case '\n':
+		    tok = _createToken(lex, NEW_LINE); break;
         default:
-			token.type = TOKEN_UNKNOWN;
+			tok = _createToken(lex, TOKEN_UNKNOWN);
             break;
     }
 
-	return token;
+	return tok;
 }
 
+char* tokenTypeToString(TokenType type){
+	   switch (type) {
+       case IDENTIFIER:
+			return "IDENTIFIER";
+       case INTEGER:
+			return "INTEGER";
+        case ADD:
+			return "ADD";
+        case SUB:
+			return "SUB";
+        case DIV:
+			return "DIV";
+        case MULT:
+			return "MULT";
+        case MOD:
+			return "MOD";
+        case EQUAL:
+			return "EQUAL";
+        case LBRACE:
+			return "LBRACE";
+        case RBRACE:
+			return "RBRACE";
+        case LPAREN:
+			return "LPAREN";
+        case RPAREN:
+			return "RPAREN";
+        case COMMA:
+			return "COMMA";
+        case DOT:
+			return "DOT";
+        case SEMICOLON:
+			return "SEMICOLON";
+        case LESS:
+			return "LESS";
+        case GREATER:
+			return "GREATER";
+        default:
+			return "UNKNOWN";
+    }
+}
 
 
 Token lexerParseToken(Lexer* lex){
 
 	_lexerSkipWhiteSpace(lex);
 
-    char c = lexerPeekChar(lex);
-    if (c == '\0') {
-        Token token = { TOKEN_EOF, NULL, 0 };
-        return token;
+	if(lexerPeekChar(lex) == '/' && lexerPeekChar2(lex) == '/'){
+		// Skip '//'
+        lexerConsumeChar(lex);
+        lexerConsumeChar(lex);
+        _lexerSkipComment(lex);
+	}
+
+    if (lexerIsAtEnd(lex)) {
+		return _createEOFToken(lex);
     }
 
-	if(isalpha(c) || c == '_'){
+	// Store the start of lexer before parsing token
+	// this allows us to calculate the length of the token
+	lex->tokenStart = lex->current;
+
+    char c = lexerPeekChar(lex);
+
+	if(isAlpha(c)){
 		return _lexerConsumeIdentifier(lex);
 	}
 
@@ -264,14 +304,12 @@ Token lexerParseToken(Lexer* lex){
         return _lexerConsumeString(lex);
     }
 
-	if(c == '/'){
-		c = lexerConsumeChar(lex);
-		if(c == '/'){
-			while(lexerPeekChar(lex) != '\n' && lexerPeekChar(lex) != '\0') lexerConsumeChar(lex);
-		} else {
-			_lexerError(lex, "Unexpected '/' comments are declared using '//'");
-		}
-	}
+	// if(c == '/' && lexerPeekChar2(lex) == '/'){
+ //        lexerConsumeChar(lex);
+ //        lexerConsumeChar(lex);
+ //        _lexerSkipComment(lex);
+ //        return lexerParseToken(lex);  // Continue parsing after comment
+	// }
 
 	return _lexerConsumeSingleCharacters(lex);
 
