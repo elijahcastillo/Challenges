@@ -173,6 +173,8 @@ int editorUpdateCursorPosition(Editor* e, int x, int y) {
 	int totalLines = _getTotalLines(e);
 	int newPositionLineLength = _getLineLength(e, y);
 
+	LOG("Update (Before): x=%d y=%d  cx=%d cy=%d  ptx=%d pty=%d  offx=%d\n", x, y, e->cx, e->cy, e->ptx, e->pty, e->col_offset);
+
 
 	if(x < 0){
 		// Prevent cursor from going before begining of text
@@ -192,20 +194,15 @@ int editorUpdateCursorPosition(Editor* e, int x, int y) {
     if (e->cx >= e->col_offset + e->screen_cols) {
         e->col_offset = e->cx - e->screen_cols + 1;
     }
-    if (e->cx < e->col_offset + e->line_number_offset) {
-        e->col_offset = e->cx - e->line_number_offset;
+    if (e->cx <= e->col_offset) {
+        e->col_offset = e->cx;
         if (e->col_offset < 0) e->col_offset = 0; // Ensure col_offset does not go negative
     }
 
-	// if(cursorInfo.ch == '\t'){
-	// 	if(x < e->cx){
-	//
-	// 		e->cx -= TAB_WIDTH - 1;
-	// 	} else {
-	//
-	// 		e->cx += TAB_WIDTH - 1;
-	// 	}
-	// }
+
+	LOG("Update (After): x=%d y=%d  cx=%d cy=%d  ptx=%d pty=%d  offx=%d\n", x, y, e->cx, e->cy, e->ptx, e->pty, e->col_offset);
+
+
     return 0;
 }
 
@@ -261,9 +258,8 @@ int editorRenderText(Editor* e){
 
     // Append the ANSI code to reset the cursor to editor cx, cy
     char cursor_reset[32];
-    // snprintf(cursor_reset, sizeof(cursor_reset), "\033[%d;%dH", e->cy + 1- e->row_offset, e->cx + 1-e->col_offset);
 	// +1 cause ANSI is 1-based
-    snprintf(cursor_reset, sizeof(cursor_reset), "\033[%d;%dH", e->cy + 1 , e->cx + 1 );
+    snprintf(cursor_reset, sizeof(cursor_reset), "\033[%d;%dH", e->cy + 1- e->row_offset, e->cx + 1-e->col_offset);
     dyarr_append_multiple(&buff, cursor_reset, strlen(cursor_reset));
 
     printf("%.*s", buff.size, buff.items);
