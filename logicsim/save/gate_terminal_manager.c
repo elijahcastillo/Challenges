@@ -41,26 +41,14 @@ void updateTerminalPositions(GateTerminalManager* manager) {
 
         float spacing = gate->dr.rect.height / (term->type == INPUT ? gate->numInputs + 1 : gate->numOutputs + 1);
         term->pos = (term->type == INPUT) ? 
-            (Vector2){gate->dr.rect.x, gate->dr.rect.y + spacing * (term->index + 1)} :
-            (Vector2){gate->dr.rect.x + gate->dr.rect.width, gate->dr.rect.y + spacing * (term->index + 1)};
+            (Vector2){gate->dr.rect.x- 20, gate->dr.rect.y + spacing * (term->index + 1)} :
+            (Vector2){gate->dr.rect.x + gate->dr.rect.width + 20, gate->dr.rect.y + spacing * (term->index + 1)};
 	
 		term->radius = gate->dr.rect.height / (gate->numInputs + gate->numOutputs + 6);
     }
 }
 
-// void gateTerminalRender(GateTerminal* term) {
-// 	Vector2 mousePos = GetMousePosition();
-//     bool isHovering = CheckCollisionPointCircle(mousePos, term->pos, term->radius);
-//
-//     Color color = (term->type == INPUT) ? RED : BLUE;
-// 	color = isHovering ? GREEN : color;
-//     DrawCircleV(term->pos, term->radius, color);
-//
-// 	if (isHovering && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-// 		isDrawingConnection
-// 	}
-//
-// }
+
 
 void gateTerminalManagerAdd(GateTerminalManager* manager, LogicGate* gate){
 	if(manager->terminalCount >= manager->terminalCap){
@@ -91,7 +79,6 @@ void gateTerminalManagerRender(GateTerminalManager* manager) {
 		DrawCircleV(term->pos, term->radius, color);
 
 		if (isHovering && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-			TraceLog(LOG_INFO, "HITTTT");
 			manager->isDrawingConnection = true;
 			manager->connectionStart = term->pos;
 		}

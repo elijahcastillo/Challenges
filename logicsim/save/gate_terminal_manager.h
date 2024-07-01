@@ -20,7 +20,6 @@ typedef struct {
 	TerminalType type;
 	Vector2 pos;
 	int index;
-
 	float radius; // Only Visual
 } GateTerminal;
 

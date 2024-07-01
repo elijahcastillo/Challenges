@@ -18,7 +18,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(raylib)
 
 # Add the executable
-set(SOURCES src/main.c src/draggable_rect.c src/logic_gate.c src/utils.c src/gate_terminal_manager.c)
+set(SOURCES src/main.c src/draggable_rect.c src/logic_gate.c src/utils.c src/truth_table.c )
 add_executable(logicsim ${SOURCES})
 
 # Include directories
