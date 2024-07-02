@@ -79,6 +79,8 @@ int main(int argc, char** argv){
 				// Backspace
 				editorDeleteCharacter(editor, 1);
 
+			} else if (c == '\r'){
+				editorInsertCharacter(editor, '\n');
 			} else {
                 // Handle regular character input
 				editorInsertCharacter(editor, c);

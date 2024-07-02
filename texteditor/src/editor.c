@@ -146,7 +146,16 @@ int editorInsertCharacter(Editor* e, char c) {
 
     char temp[2] = {c, '\0'};
     pieceTableInsert(e->table, cursorInfo.pos, temp);
-    editorUpdateCursorPosition(e, e->ptx + 1, e->pty);
+
+	if(c == '\n'){
+		editorUpdateCursorPosition(e, 0, e->pty + 1);
+
+	} else {
+
+		editorUpdateCursorPosition(e, e->ptx + 1, e->pty);
+	}
+
+
     return 0;
 }
 
@@ -166,6 +175,8 @@ int editorDeleteCharacter(Editor* e, int length) {
     return 0;
 }
 
+
+
 int editorUpdateCursorPosition(Editor* e, int x, int y) {
 
 
@@ -175,6 +186,18 @@ int editorUpdateCursorPosition(Editor* e, int x, int y) {
 
 	LOG("Update (Before): x=%d y=%d  cx=%d cy=%d  ptx=%d pty=%d  offx=%d\n", x, y, e->cx, e->cy, e->ptx, e->pty, e->col_offset);
 
+	// if(cursorInfo.ch == '\t'){
+	// 	int dx = x - e->ptx; 
+	// 	if(dx > 0){
+	// 		e->cx += TAB_WIDTH;
+	// 	} else {
+	// 		e->cx -= TAB_WIDTH;
+	// 	}
+	// 	
+	// } else {
+	// 	e->cx = x;
+	// 	e->cy = y;
+	// }
 
 	if(x < 0){
 		// Prevent cursor from going before begining of text
@@ -186,8 +209,8 @@ int editorUpdateCursorPosition(Editor* e, int x, int y) {
 
     e->ptx = x;
     e->pty = y;
-    e->cx = x;
-    e->cy = y;
+	e->cx = x;
+	e->cy = y;
 
 
     // Adjust col_offset based on the cursor position
