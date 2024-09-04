@@ -32,7 +32,7 @@ int main(int argc, char** argv){
 	CURSOR_RESET();
 
 
-	editorInitializeBuffer(editor, readFileToString("test2.txt"));
+	editorInitializeBuffer(editor, readFileToString("src/main.c"));
 	editorRenderText(editor);
 	char c;
     while (1) {

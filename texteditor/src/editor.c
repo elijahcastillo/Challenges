@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 #define LINE_NUMBER_OFFSET 4
-#define TAB_WIDTH 4
+#define TAB_WIDTH 1
 Editor* createEditor(){
 	Editor* editor = malloc(sizeof(Editor));
 	editor->cx = 0;
@@ -251,7 +251,7 @@ int editorRenderText(Editor* e){
 
 			if(c == '\t'){
                 // Handle tabs by adding the appropriate number of spaces
-                int tabSpaces = TAB_WIDTH - (charactersInLine % TAB_WIDTH);
+                int tabSpaces = TAB_WIDTH;
                 for (int j = 0; j < tabSpaces; j++) {
                     dyarr_append(&buff, ' ');
                     charactersInLine++;

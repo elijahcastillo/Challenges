@@ -25,14 +25,20 @@ typedef struct {
 	LogicGate* gate;
 	TerminalState state;
 	TerminalType type;
+	int index;
 
 	// Only Visual
 	Vector2 pos;
-	int index;
 	float radius; 
 } GateTerminal;
 
 
+typedef struct Connection {
+    GateTerminal* from;
+    GateTerminal* to;
+    Vector2 controlPointStart;  // Bezier control point
+    Vector2 controlPointEnd;    // Bezier control point
+} Connection;
 
 
 
@@ -47,8 +53,8 @@ struct LogicGate{
 
 	TruthTable* truthTable;
 
-	bool isDraggingConnection;
-	Vector2 connectionStart;
+    bool isDraggingConnection;
+    Vector2 connectionStart;
 };
 
 

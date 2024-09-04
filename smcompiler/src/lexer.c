@@ -304,13 +304,6 @@ Token lexerParseToken(Lexer* lex){
         return _lexerConsumeString(lex);
     }
 
-	// if(c == '/' && lexerPeekChar2(lex) == '/'){
- //        lexerConsumeChar(lex);
- //        lexerConsumeChar(lex);
- //        _lexerSkipComment(lex);
- //        return lexerParseToken(lex);  // Continue parsing after comment
-	// }
-
 	return _lexerConsumeSingleCharacters(lex);
 
 }

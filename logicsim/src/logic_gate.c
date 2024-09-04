@@ -5,6 +5,52 @@
 #include <string.h>
 
 
+// void checkMouseInteractionWithTerminals(LogicGate* lg) {
+//     Vector2 mousePos = GetMousePosition();
+//
+//     // Check for terminal interaction
+//     for (int i = 0; i < lg->numInputs; i++) {
+//         if (CheckCollisionPointCircle(mousePos, lg->inputs[i].pos, lg->inputs[i].radius) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+//             lg->tempConnection.from = &lg->inputs[i];
+//             lg->isDraggingConnection = true;
+//             break;
+//         }
+//     }
+//
+//     // If dragging, update the temporary connection
+//     if (lg->isDraggingConnection) {
+//         lg->tempConnection.controlPointStart = mousePos;
+//         lg->tempConnection.controlPointEnd = mousePos;
+//
+//         if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
+//             for (int i = 0; i < lg->numOutputs; i++) {
+//                 if (CheckCollisionPointCircle(mousePos, lg->outputs[i].pos, lg->outputs[i].radius)) {
+//                     lg->tempConnection.to = &lg->outputs[i];
+//                     // Add the connection to the list of connections
+//                     addConnection(lg, lg->tempConnection);
+//                     break;
+//                 }
+//             }
+//             lg->isDraggingConnection = false;
+//         }
+//     }
+// }
+//
+// void logicGateRenderConnections(LogicGate* lg) {
+//     for (int i = 0; i < lg->numConnections; i++) {
+//         Connection conn = lg->connections[i];
+//         Vector2 points[4] = {conn.from->pos, conn.controlPointStart, conn.controlPointEnd, conn.to->pos};
+//         DrawSplineBezierCubic(points, 4, 2.0f, RED);  // Adjust color and thickness as needed
+//     }
+//
+//     // Draw temporary connection if dragging
+//     if (lg->isDraggingConnection) {
+//         Vector2 tempPoints[4] = {lg->tempConnection.from->pos, lg->tempConnection.controlPointStart, lg->tempConnection.controlPointEnd, GetMousePosition()};
+//         DrawSplineBezierCubic(tempPoints, 4, 2.0f, DARKGRAY);  // Temporary connection visual
+//     }
+// }
+
+// =============================
 
 
 LogicGate* logicGateInit(char* name, int initialX, int initialY, int inputs, int outputs){
@@ -144,6 +190,8 @@ void logicGateRender(LogicGate* lg) {
 		updateTerminalPosition(&lg->outputs[i]);
 		gateTerminalRender(&lg->outputs[i]);
 	}
+
+
 
 }
 

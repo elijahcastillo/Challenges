@@ -1,5 +1,5 @@
-#ifndef _SWISS_DYNAMIC_ARR
-#define _SWISS_DYNAMIC_ARR
+#ifndef DYNAMIC_ARR
+#define DYNAMIC_ARR
 
 // Example:
 // ===============
@@ -133,4 +133,4 @@ int main(){
 
 
 
-#endif //_SWISS_DYNAMIC_ARR
+#endif //DYNAMIC_ARR

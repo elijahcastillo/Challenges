@@ -10,7 +10,7 @@ int main(){
 	printPieceTableInfo(&pt);
 
 
-	pieceTableInsert(&pt, 5, "lol");
+	pieceTableInsert(&pt, 5, "hey");
 	pieceTableInsert(&pt, 8, "elijah");
 
 	printf("\n");
